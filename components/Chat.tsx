@@ -1413,65 +1413,7 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
                 {/* CENTER COLUMN: CHAT STREAM */}
                 <div className="flex-1 flex flex-col min-w-0 bg-[#050b14] relative border-r border-white/5">
 
-                    {/* TARGET URL INPUT POPUP (When URL Expert is active) */}
-                    {activeAgents.includes('URL Expert') && (
-                        <div className="absolute top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-lg bg-[#0b1221] border border-blue-500/30 rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5),0_0_40px_rgba(59,130,246,0.1)] p-5 flex flex-col gap-4 z-50 animate-in zoom-in-95 duration-200">
-                            <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                                <h3 className="text-sm font-semibold text-blue-400 flex items-center gap-2">
-                                    <Globe className="w-4 h-4" />
-                                    URL Expert Initialization
-                                </h3>
-                                <button onClick={() => toggleAgent('URL Expert')} className="text-slate-500 hover:text-slate-300 transition-colors">
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
 
-                            {urlList.length > 0 && (
-                                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto custom-scrollbar">
-                                    {urlList.map((u, i) => (
-                                        <div key={i} className="flex items-center gap-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg text-xs shadow-sm">
-                                            <span className="truncate max-w-[300px]">{u}</span>
-                                            <button onClick={() => setUrlList(urlList.filter((_, idx) => idx !== i))} className="hover:text-amber-400 transition-colors ml-1">
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            <div className="relative w-full">
-                                <input
-                                    type="url"
-                                    placeholder="Paste a URL here and press Enter..."
-                                    value={urlInput}
-                                    onChange={(e) => setUrlInput(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            if (urlInput.trim()) {
-                                                setUrlList([...urlList, urlInput.trim()]);
-                                                setUrlInput('');
-                                            }
-                                        }
-                                    }}
-                                    className="w-full bg-[#161b2c] border border-blue-500/30 rounded-xl pl-4 pr-12 py-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/60 transition-colors"
-                                />
-                                <button
-                                    onClick={() => {
-                                        if (urlInput.trim()) {
-                                            setUrlList([...urlList, urlInput.trim()]);
-                                            setUrlInput('');
-                                        }
-                                    }}
-                                    disabled={!urlInput.trim()}
-                                    className="absolute right-2 top-1.5 bottom-1.5 px-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed border border-transparent hover:border-blue-500"
-                                    title="Add URL"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
 
                     <div className="flex-1 overflow-y-auto p-6 space-y-8 scroll-smooth custom-scrollbar" ref={scrollContainerRef}>
                         {messages.length === 0 && (
@@ -1636,6 +1578,59 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
                         )}
 
                         <div className="relative max-w-4xl mx-auto flex flex-col gap-3">
+                            {/* URL Expert Input Row */}
+                            {activeAgents.includes('URL Expert') && (
+                                <div className="flex flex-col gap-2 p-3 bg-[#0b1221] border border-blue-500/30 rounded-xl shadow-inner mb-1 animate-in zoom-in-95 duration-200">
+                                    <div className="flex items-center gap-2 text-xs font-semibold text-blue-400 mb-1 ml-1">
+                                        <Globe className="w-3.5 h-3.5" />
+                                        URL Links Attachment
+                                    </div>
+                                    {urlList.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto custom-scrollbar">
+                                            {urlList.map((u, i) => (
+                                                <div key={i} className="flex items-center gap-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 px-2 py-1 rounded-md text-[11px] shadow-sm">
+                                                    <span className="truncate max-w-[300px]">{u}</span>
+                                                    <button onClick={() => setUrlList(urlList.filter((_, idx) => idx !== i))} className="hover:text-amber-400 transition-colors ml-1">
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="relative w-full">
+                                        <input
+                                            type="url"
+                                            placeholder="Paste a URL here and press Enter..."
+                                            value={urlInput}
+                                            onChange={(e) => setUrlInput(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    if (urlInput.trim()) {
+                                                        setUrlList([...urlList, urlInput.trim()]);
+                                                        setUrlInput('');
+                                                    }
+                                                }
+                                            }}
+                                            className="w-full bg-[#161b2c] border border-blue-500/30 rounded-lg pl-3 pr-10 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/60 transition-colors"
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                if (urlInput.trim()) {
+                                                    setUrlList([...urlList, urlInput.trim()]);
+                                                    setUrlInput('');
+                                                }
+                                            }}
+                                            disabled={!urlInput.trim()}
+                                            className="absolute right-1.5 top-1 bottom-1 px-1.5 bg-blue-500/10 text-blue-400 rounded-md hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed border border-transparent hover:border-blue-500"
+                                            title="Add URL"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Image Preview Area Row */}
                             {imageAttachments.length > 0 && (
                                 <div className="flex gap-3 mb-3 p-3 bg-[#0b1221] border border-slate-800 rounded-xl overflow-x-auto custom-scrollbar">
