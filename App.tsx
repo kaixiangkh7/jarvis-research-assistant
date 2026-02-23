@@ -188,25 +188,7 @@ const App: React.FC = () => {
         accept="application/pdf"
       />
 
-      {/* Main Landing Navbar */}
-      {!isAppMode && (
-        <nav className="flex-none px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pt-4 pb-2 z-50">
-          <div className="bg-slate-900/70 backdrop-blur-xl border border-white/5 rounded-2xl shadow-lg shadow-black/10 h-16 flex items-center justify-between px-6 transition-all hover:border-white/10">
-            <div className="flex items-center gap-3 cursor-pointer group">
-              <div className="bg-gradient-to-tr from-emerald-500 to-emerald-600 p-1.5 rounded-lg shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-shadow">
-                <Bot className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors duration-300">Jarvis</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800/60 transition-colors">
-              <Sparkles className="w-3 h-3 text-purple-400" />
-              <span className="text-[10px] font-bold tracking-wider text-slate-300 uppercase">
-                Gemini 3.0
-              </span>
-            </div>
-          </div>
-        </nav>
-      )}
+
 
       {isLoading && analysisResults && (
         <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center">
