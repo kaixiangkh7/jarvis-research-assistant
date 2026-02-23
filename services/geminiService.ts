@@ -1,8 +1,7 @@
 
-import { GoogleGenAI, Type, Schema, Chat } from "@google/genai";
+import { Type, Schema, Chat } from "@google/genai";
 import { AnalysisResult, OrchestratorPlan, ChatMessage, CollaborationStep, AdvisorReview, OutputQualityVerdict, ClarificationRequest, ResearchEvaluation, IntentClassification, LeadArbitration } from "../types";
-
-const GEMINI_API_KEY = process.env.API_KEY || '';
+import { ai } from "./proxyClient";
 
 // --- ABORT CONTROLLER LOGIC ---
 let activeController: AbortController | null = null;
@@ -160,7 +159,7 @@ async function callGeminiWithRetry<T>(
   throw new Error("API call failed after max retries");
 }
 
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY || 'DUMMY_KEY_TO_PREVENT_CRASH' });
+// AI client is now imported from proxyClient.ts — routes through secure proxy in production
 
 // --- 1. DASHBOARD PARSER (Structure Extraction) ---
 
