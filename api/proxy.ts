@@ -100,12 +100,22 @@ function getAllowedOrigins(): string[] {
     return origins;
 }
 
-function isOriginAllowed(origin: string | undefined): boolean {
+function isOriginAllowed(req: VercelRequest, origin: string | undefined): boolean {
     if (!origin) return false; // Block requests with no origin (e.g., curl)
     const allowed = getAllowedOrigins();
     // If no origins configured, allow all (development fallback)
     if (allowed.length === 0) return true;
-    return allowed.some(a => origin.startsWith(a) || origin === a);
+
+    if (allowed.some(a => origin.startsWith(a) || origin === a)) return true;
+
+    // Auto-allow if the origin matches the host we are serving from (same-origin request)
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    if (host && origin.includes(host as string)) return true;
+
+    // Auto-allow any vercel.app subdomain if we're deployed on Vercel
+    if (process.env.VERCEL === '1' && origin.endsWith('.vercel.app')) return true;
+
+    return false;
 }
 
 // =============================================================================
@@ -114,7 +124,7 @@ function isOriginAllowed(origin: string | undefined): boolean {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // --- CORS Headers ---
     const origin = req.headers.origin as string | undefined;
-    if (origin && isOriginAllowed(origin)) {
+    if (origin && isOriginAllowed(req, origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
     }
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -150,7 +160,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // --- Origin Check (block non-browser / cross-origin requests) ---
-    if (!isOriginAllowed(origin)) {
+    if (!isOriginAllowed(req, origin)) {
         return res.status(403).json({ error: 'Forbidden: Invalid origin' });
     }
 
