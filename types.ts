@@ -60,7 +60,7 @@ export interface OutputQualityVerdict {
 }
 
 export interface LeadArbitration {
-  verdict: "APPROVED" | "REJECTED" | "DEBATE" | "NEEDS_CLARIFICATION";
+  verdict: "APPROVED" | "REJECTED" | "INCREMENTAL" | "DEBATE" | "NEEDS_CLARIFICATION";
   reasoning: string;
   remediation_plan?: OrchestratorPlan;
   clarification_message?: string; // New: Message to display to the user

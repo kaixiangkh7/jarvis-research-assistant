@@ -620,7 +620,9 @@ const CollaborationLog = ({ steps }: { steps: CollaborationStep[] }) => {
                                                     ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                                                     : (step.content as LeadArbitration).verdict === 'DEBATE'
                                                         ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                                                        : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                                                        : (step.content as LeadArbitration).verdict === 'INCREMENTAL'
+                                                            ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'
+                                                            : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
                                                     }`}>
                                                     FINAL DECISION: {(step.content as LeadArbitration).verdict}
                                                 </span>
@@ -1084,7 +1086,7 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
             while (true) {
                 setLoadingStatus("Lead Researcher deciding next steps...");
                 setSwarmPhase('REVIEW');
-                arbitration = await arbitrateReviewBoardFeedback(userQuery, content, consultantOpinion, activeAgents, debateHistory);
+                arbitration = await arbitrateReviewBoardFeedback(userQuery, content, consultantOpinion, activeAgents, debateHistory, accumulatedResults);
                 appendCollaborationStep(msgIndex, { type: 'LEAD_ARBITRATION', round: attempt + 1, content: arbitration, timestamp: Date.now() });
 
                 if (arbitration.verdict === 'DEBATE') {
@@ -1109,11 +1111,72 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
                         break;
                     }
                 }
-                break; // Break if APPROVED or REJECTED
+                break; // Break if APPROVED, REJECTED, INCREMENTAL, or NEEDS_CLARIFICATION
             }
 
+            // --- INCREMENTAL: Targeted follow-up without full restart ---
+            if (arbitration.verdict === 'INCREMENTAL' && attempt < MAX_RETRYS && arbitration.remediation_plan) {
+                setLoadingStatus("Lead Researcher: Running targeted follow-up (Incremental)...");
+                const incrementalPlan = arbitration.remediation_plan;
+
+                const incrementalTasks = getAllTasks(incrementalPlan);
+                if (incrementalTasks.length > 0) {
+                    appendCollaborationStep(msgIndex, { type: 'EXECUTION_LOG', round: attempt + 10, content: { tasks: incrementalTasks }, timestamp: Date.now() });
+                    const newResults = await executePlanTasks(incrementalPlan, (status) => setLoadingStatus(status));
+                    accumulatedResults = [...accumulatedResults, ...newResults];
+                    appendCollaborationStep(msgIndex, { type: 'EXECUTION_RESULTS', round: attempt + 10, content: { results: newResults }, timestamp: Date.now() });
+                }
+
+                // Re-synthesize with ALL accumulated results (old + new)
+                setLoadingStatus("Re-synthesizing report with new findings...");
+                setSwarmPhase('SYNTHESIS');
+                const { thinking: newThinking, content: newContent } = await synthesizeReport(userQuery, currentPlan, historyText, accumulatedResults);
+
+                // Loop back to consultant review with the improved report
+                setLoadingStatus("Consultant reviewing updated report...");
+                setSwarmPhase('REVIEW');
+                consultantOpinion = await reviewOutputWithBoard(userQuery, newContent, currentPlan);
+                appendCollaborationStep(msgIndex, { type: 'BOARD_REVIEW', round: attempt + 2, content: consultantOpinion, timestamp: Date.now() });
+
+                // Reset debate state for next arbitration round
+                debateRound = 0;
+                debateHistory = [];
+                attempt++;
+
+                // Re-run arbitration on the new content
+                setLoadingStatus("Lead Researcher evaluating updated report...");
+                arbitration = await arbitrateReviewBoardFeedback(userQuery, newContent, consultantOpinion, activeAgents, debateHistory, accumulatedResults);
+                appendCollaborationStep(msgIndex, { type: 'LEAD_ARBITRATION', round: attempt + 1, content: arbitration, timestamp: Date.now() });
+
+                if (arbitration.verdict === 'APPROVED' || arbitration.verdict === 'NEEDS_CLARIFICATION' || attempt >= MAX_RETRYS) {
+                    // Finalize with the new content
+                    if (arbitration.verdict === 'NEEDS_CLARIFICATION') {
+                        const clarificationMsg = arbitration.clarification_message || "I need more information or specific expert agents to complete this request.";
+                        setMessages(prev => {
+                            const newMsgs = [...prev];
+                            if (newMsgs[msgIndex]) {
+                                newMsgs[msgIndex] = { ...newMsgs[msgIndex], text: `**Lead Researcher needs help:**\n\n${clarificationMsg}`, thinking: newThinking };
+                            }
+                            return newMsgs;
+                        });
+                        break;
+                    }
+                    setMessages(prev => {
+                        const newMsgs = [...prev];
+                        if (newMsgs[msgIndex]) {
+                            newMsgs[msgIndex] = { ...newMsgs[msgIndex], text: newContent, thinking: newThinking };
+                        }
+                        return newMsgs;
+                    });
+                    break;
+                }
+                // If still INCREMENTAL or REJECTED, let the outer while(true) loop handle it
+                continue;
+            }
+
+            // --- REJECTED: Full restart (last resort) ---
             if (arbitration.verdict === 'REJECTED' && attempt < MAX_RETRYS && arbitration.remediation_plan) {
-                setLoadingStatus("Lead Researcher decided to Re-research. Re-calibrating...");
+                setLoadingStatus("Lead Researcher decided to Re-research (Full Restart). Re-calibrating...");
                 let newPlan = arbitration.remediation_plan;
 
                 const allTasks = getAllTasks(newPlan);
@@ -1520,10 +1583,10 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
 
                     {/* Input Area */}
                     <div className="p-6 bg-[#050b14] border-t border-white/5 relative z-20">
-                        {loadingStatus && (
+                        {(loadingStatus || isProcessing) && (
                             <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-emerald-400 text-xs px-4 py-1.5 rounded-full border border-slate-700 shadow-xl flex items-center gap-2 animate-in slide-in-from-bottom-2 fade-in whitespace-nowrap z-30">
                                 <RefreshCcw className="w-3 h-3 animate-spin" />
-                                {loadingStatus}
+                                {loadingStatus || 'Processing...'}
                             </div>
                         )}
 
@@ -1560,10 +1623,10 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
                                     disabled={isProcessing || availableAgents.length === 0}
                                 />
                                 <div className="absolute right-2 top-2">
-                                    {isProcessing ? (
+                                    {(loadingStatus || isProcessing) ? (
                                         <button
                                             onClick={handleStop}
-                                            className="p-2.5 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500/20 transition-colors"
+                                            className="p-2.5 bg-rose-500 text-white rounded-lg hover:bg-rose-400 transition-all shadow-lg"
                                             title="Stop Generation"
                                         >
                                             <StopCircle className="w-5 h-5" />

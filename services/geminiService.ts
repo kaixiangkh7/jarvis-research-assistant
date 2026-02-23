@@ -129,16 +129,16 @@ const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // --- ROBUST API WRAPPER FOR 429 HANDLING ---
 async function callGeminiWithRetry<T>(
-  apiCall: () => Promise<T>,
+  apiCall: (abortSignal?: AbortSignal) => Promise<T>,
   retries = 3,
   baseDelay = 2000
 ): Promise<T> {
   for (let i = 0; i < retries; i++) {
     checkAbort();
     try {
-      return await apiCall();
+      return await apiCall(activeController?.signal);
     } catch (error: any) {
-      if (activeController?.signal.aborted || error.message === 'USER_ABORTED') {
+      if (activeController?.signal?.aborted || error.message === 'USER_ABORTED' || error.name === 'AbortError') {
         throw new Error('USER_ABORTED');
       }
 
@@ -207,7 +207,7 @@ const analyzeSingleReport = async (file: File): Promise<AnalysisResult> => {
     const filePart = await fileToGenerativePart(file);
 
     // Use the wrapper
-    const response = await callGeminiWithRetry(async () => {
+    const response = await callGeminiWithRetry(async (abortSignal) => {
       return await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: {
@@ -223,7 +223,8 @@ const analyzeSingleReport = async (file: File): Promise<AnalysisResult> => {
           responseSchema: analysisSchema,
           temperature: 0.1,
           maxOutputTokens: 8192,
-          thinkingConfig: { thinkingBudget: 2048 }
+          thinkingConfig: { thinkingBudget: 2048 },
+          abortSignal
         }
       });
     }, 5, 3000);
@@ -382,12 +383,13 @@ export const initializeAgentSwarm = async (
 
     try {
       checkAbort();
-      await callGeminiWithRetry(async () => {
+      await callGeminiWithRetry(async (abortSignal) => {
         await chat.sendMessage({
           message: [
             filePart,
             { text: "Confirm you have reviewed the document and are ready." }
-          ]
+          ],
+          config: { abortSignal }
         });
       }, 3, 3000);
 
@@ -462,14 +464,15 @@ export const classifyUserIntent = async (
     }
   }
 
-  return await callGeminiWithRetry(async () => {
+  return await callGeminiWithRetry(async (abortSignal) => {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [prompt, ...imageParts],
       config: {
         responseMimeType: "application/json",
         responseSchema: intentSchema,
-        temperature: 0.1
+        temperature: 0.1,
+        abortSignal
       }
     });
     if (!response.text) return { type: "DEEP_RESEARCH", reasoning: "Default" };
@@ -555,10 +558,11 @@ export const executeQuickAnswer = async (
     Ensure every claim is properly closed with </claim>.
   `;
 
-  const synthesis = await callGeminiWithRetry(async () => {
+  const synthesis = await callGeminiWithRetry(async (abortSignal) => {
     const resp = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [prompt, ...imageParts],
+      config: { abortSignal }
     });
     return resp.text || "No response generated.";
   });
@@ -700,11 +704,11 @@ const leadArbitrationSchema: Schema = {
   properties: {
     verdict: {
       type: Type.STRING,
-      enum: ["APPROVED", "REJECTED", "DEBATE", "NEEDS_CLARIFICATION"],
-      description: "APPROVE if report is good. REJECT if you need to dispatch expert again. NEEDS_CLARIFICATION if the root cause of poor performance is missing data (e.g. requires Web Search) that you cannot currently solve."
+      enum: ["APPROVED", "REJECTED", "INCREMENTAL", "DEBATE", "NEEDS_CLARIFICATION"],
+      description: "APPROVE if report is good. INCREMENTAL if the report is mostly correct but has a narrow gap that can be filled with a small targeted follow-up (previous results are preserved). REJECT only for fundamental structural issues requiring a full restart. NEEDS_CLARIFICATION if you cannot solve the issue without user input."
     },
     reasoning: { type: Type.STRING, description: "Your reasoning for accepting or overriding the consultant's opinion." },
-    remediation_plan: orchestratorSchema, // Only required if REJECTED
+    remediation_plan: orchestratorSchema, // Required if REJECTED or INCREMENTAL
     clarification_message: { type: Type.STRING, description: "Only if NEEDS_CLARIFICATION. A direct message explaining to the user why you are stuck (e.g., 'To find the latest trends, I need you to activate the Web Researcher agent')." }
   },
   required: ["verdict", "reasoning"]
@@ -741,14 +745,15 @@ export const generateClarificationQuestions = async (
     }
   }
 
-  return await callGeminiWithRetry(async () => {
+  return await callGeminiWithRetry(async (abortSignal) => {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [prompt, ...imageParts],
       config: {
         responseMimeType: "application/json",
         responseSchema: clarificationSchema,
-        temperature: 0.3
+        temperature: 0.3,
+        abortSignal
       }
     });
     if (!response.text) return { requires_clarification: false, questions: [] };
@@ -932,14 +937,15 @@ export const refinePlanWithAdvisor = async (
 
 const generateOrchestratorPlan = async (promptContents: string | any[]): Promise<OrchestratorPlan> => {
   checkAbort();
-  return await callGeminiWithRetry(async () => {
+  return await callGeminiWithRetry(async (abortSignal) => {
     const response = await ai.models.generateContent({
       model: "gemini-3.1-pro-preview",
       contents: promptContents,
       config: {
         responseMimeType: "application/json",
         responseSchema: orchestratorSchema,
-        temperature: 0.2
+        temperature: 0.2,
+        abortSignal
       }
     });
     if (!response.text) throw new Error("No response string formed.");
@@ -983,7 +989,7 @@ async function getAdvisorFeedback(userQuery: string, plan: OrchestratorPlan, ava
     OUTPUT JSON matching the schema.
   `;
 
-  return await callGeminiWithRetry(async () => {
+  return await callGeminiWithRetry(async (abortSignal) => {
     const response = await ai.models.generateContent({
       model: "gemini-3.1-pro-preview",
       contents: advisorPrompt,
@@ -991,6 +997,7 @@ async function getAdvisorFeedback(userQuery: string, plan: OrchestratorPlan, ava
         responseMimeType: "application/json",
         responseSchema: advisorSchema,
         temperature: 0.1,
+        abortSignal
       }
     });
 
@@ -1023,8 +1030,11 @@ export const executePlanTasks = async (
     const session = agentSwarm.get(task.file_name);
     if (!session) return { file: task.file_name, question: task.specific_question, response: "Error: Expert not assigned." };
     try {
-      const text = await callGeminiWithRetry(async () => {
-        const response = await session.chat.sendMessage({ message: task.specific_question });
+      const text = await callGeminiWithRetry(async (abortSignal) => {
+        const response = await session.chat.sendMessage({
+          message: task.specific_question,
+          config: { abortSignal }
+        });
         return response.text;
       }, 3, 2000);
       return { file: task.file_name, question: task.specific_question, response: text || "No response." };
@@ -1064,7 +1074,7 @@ export const evaluateResearchResults = async (
       OUTPUT JSON.
     `;
 
-  return await callGeminiWithRetry(async () => {
+  return await callGeminiWithRetry(async (abortSignal) => {
     const response = await ai.models.generateContent({
       model: "gemini-3.1-pro-preview",
       contents: evalPrompt,
@@ -1072,7 +1082,8 @@ export const evaluateResearchResults = async (
         responseMimeType: "application/json",
         responseSchema: researchEvaluationSchema,
         temperature: 0.1,
-        thinkingConfig: { thinkingBudget: 4096 }
+        thinkingConfig: { thinkingBudget: 4096 },
+        abortSignal
       }
     });
 
@@ -1121,11 +1132,14 @@ export const synthesizeReport = async (
         4. **TABLES**: When generating Markdown tables, ensure the VALUES inside the table cells are wrapped in <claim> tags.
     `;
 
-  return await callGeminiWithRetry(async () => {
+  return await callGeminiWithRetry(async (abortSignal) => {
     const coordinator = await ai.models.generateContent({
       model: "gemini-3.1-pro-preview",
       contents: synthesisPrompt,
-      config: { thinkingConfig: { thinkingBudget: isDeep ? 32768 : 4096 } }
+      config: {
+        thinkingConfig: { thinkingBudget: isDeep ? 32768 : 4096 },
+        abortSignal
+      }
     });
 
     const rawText = coordinator.text || "Synthesis failed.";
@@ -1173,7 +1187,7 @@ export const reviewOutputWithBoard = async (
       Output JSON.
     `;
 
-  return await callGeminiWithRetry(async () => {
+  return await callGeminiWithRetry(async (abortSignal) => {
     const response = await ai.models.generateContent({
       model: "gemini-3.1-pro-preview",
       contents: auditPrompt,
@@ -1181,6 +1195,7 @@ export const reviewOutputWithBoard = async (
         responseMimeType: "application/json",
         responseSchema: outputQualitySchema,
         temperature: 0.1,
+        abortSignal
       }
     });
 
@@ -1194,12 +1209,18 @@ export const arbitrateReviewBoardFeedback = async (
   synthesizedOutput: string,
   consultantOpinion: OutputQualityVerdict,
   activeFiles: string[],
-  debateHistory: string[] = []
+  debateHistory: string[] = [],
+  accumulatedResults: { file: string, question: string, response: string }[] = []
 ): Promise<LeadArbitration> => {
   checkAbort();
 
   const debateContext = debateHistory.length > 0
     ? `\n\nPREVIOUS DEBATE HISTORY:\n${debateHistory.map((msg, i) => `Round ${i + 1}: ${msg}`).join('\n')}\n\nYou are still arguing with the Consultant over these points.`
+    : "";
+
+  // Build a concise summary of what has already been gathered
+  const accumulatedSummary = accumulatedResults.length > 0
+    ? `\n\nALREADY GATHERED DATA (${accumulatedResults.length} results from previous rounds):\n${accumulatedResults.map(r => `- [${r.file}] Q: "${r.question}" → A: ${r.response.substring(0, 200)}...`).join('\n')}\n`
     : "";
 
   const arbitrationPrompt = `
@@ -1209,7 +1230,7 @@ export const arbitrateReviewBoardFeedback = async (
       ORIGINAL QUERY: "${userQuery}"
       YOUR REPORT:
       ${synthesizedOutput}
-      
+      ${accumulatedSummary}
       CONSULTANT OPINION:
       Does it answer the query? ${consultantOpinion.does_answer_query}
       Has hallucinations? ${consultantOpinion.has_hallucinations}
@@ -1223,13 +1244,24 @@ export const arbitrateReviewBoardFeedback = async (
       2. **OBJECTIVITY RULE**: You must independently evaluate the Consultant's opinion against your report and the sources. Do NOT default to agreeing with the Consultant. If the Consultant is overly pedantic, misinterprets a source, or flags a false hallucination, you MUST push back.
       3. **DEBATE VERDICT**: If you disagree with the Consultant, output "DEBATE" as your verdict and explain your counter-argument in the 'reasoning' field. The Consultant will read it and reply.
       4. **APPROVED VERDICT**: If you believe the report is good enough, output "APPROVED".
-      5. **REJECTED VERDICT**: You should ONLY output "REJECTED" if the Consultant points out a *genuine* flaw, a significantly missing fact, or an actual ungrounded hallucination AND you have the capability to dispatch expert agents again to find the info. If REJECTED, you MUST provide a 'remediation_plan'.
+
+      5. **INCREMENTAL vs REJECTED — DECISION FRAMEWORK**:
+         - **INCREMENTAL** (PREFERRED): The existing report is mostly correct, but is missing specific data points or has a narrow gap. Provide a small, targeted remediation_plan to fill ONLY the gap. All previously gathered data will be PRESERVED and MERGED with the new findings. Use this when:  
+           • Only 1-2 specific facts are missing  
+           • The overall structure and approach are sound  
+           • The Consultant's concern is a minor omission, not a fundamental flaw  
+         - **REJECTED** (LAST RESORT): The report has fundamental structural issues, a completely wrong approach, or widespread hallucinations. A full re-research from scratch is necessary. Use this ONLY when:  
+           • The entire approach or structure is wrong  
+           • Most claims are ungrounded or hallucinated  
+           • An incremental fix would not resolve the core problem  
+         - **DEFAULT TO INCREMENTAL** when in doubt. Most Consultant feedback is about missing details, not structural failures.
+
       6. **NEEDS_CLARIFICATION VERDICT**: If the Consultant correctly points out missing data (e.g. "latest trends absent"), BUT you cannot find this data because you don't have the right active expert agents (for example, you only have static PDFs, but need the 'Web Researcher' agent), you MUST output 'NEEDS_CLARIFICATION'. Do NOT continually output 'REJECTED' with a new plan for the same static file. Use 'clarification_message' to explain the root cause and ask the user to turn on the required agent or provide newer files.
       
       Output JSON.
     `;
 
-  return await callGeminiWithRetry(async () => {
+  return await callGeminiWithRetry(async (abortSignal) => {
     const response = await ai.models.generateContent({
       model: "gemini-3.1-pro-preview",
       contents: arbitrationPrompt,
@@ -1237,7 +1269,8 @@ export const arbitrateReviewBoardFeedback = async (
         responseMimeType: "application/json",
         responseSchema: leadArbitrationSchema,
         temperature: 0.1,
-        thinkingConfig: { thinkingBudget: 4096 }
+        thinkingConfig: { thinkingBudget: 4096 },
+        abortSignal
       }
     });
 
