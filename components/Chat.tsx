@@ -852,8 +852,22 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
     useEffect(() => {
         const agents = getSwarmStatus();
         setAvailableAgents(agents);
-        // Turn off web agents by default
-        setActiveAgents(agents.filter(a => a !== 'Web Expert' && a !== 'URL Expert'));
+        // Turn off web agents by default, but preserve their active state if they were turned on
+        setActiveAgents(prev => {
+            if (prev.length === 0) {
+                return agents.filter(a => a !== 'Web Expert' && a !== 'URL Expert');
+            }
+
+            const hasWeb = prev.includes('Web Expert');
+            const hasUrl = prev.includes('URL Expert');
+
+            return agents.filter(a => {
+                if (a === 'Web Expert') return hasWeb;
+                if (a === 'URL Expert') return hasUrl;
+                // Keep other file agents active by default
+                return true;
+            });
+        });
     }, [analysisResults, swarmReadyTimestamp]);
 
     const toggleAgent = (agentName: string) => {
@@ -1271,18 +1285,19 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
     };
 
     const handleSendMessage = async () => {
-        if ((!input.trim() && imageAttachments.length === 0) || isProcessing) return;
+        let userMsg = input.trim();
+        const activeUrls = urlInput.trim() ? [...urlList, urlInput.trim()] : urlList;
+
+        if ((!userMsg && imageAttachments.length === 0 && activeUrls.length === 0) || isProcessing) return;
 
         // Safety check: if no agents selected, warn user
         if (activeAgents.length === 0) {
-            setMessages(prev => [...prev, { role: 'model', text: "⚠️ Please select at least one file expert from the top bar to continue." }]);
+            setMessages(prev => [...prev, { role: 'model', text: "⚠️ Please select at least one expert from the Team Network to continue." }]);
             return;
         }
 
-        let userMsg = input.trim();
-        const activeUrls = urlInput.trim() ? [...urlList, urlInput.trim()] : urlList;
         if (activeAgents.includes('URL Expert') && activeUrls.length > 0) {
-            userMsg = `[Target URLs:\n${activeUrls.map(u => `- ${u}`).join('\n')}]\n\n${userMsg}`;
+            userMsg = `[Target URLs:\n${activeUrls.map(u => `- ${u}`).join('\n')}]\n\n${userMsg || "Please pull the precise facts, figures, and insights from these URLs. No filler."}`;
         }
 
         const attachedImagesToSent = [...imageAttachments];

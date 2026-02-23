@@ -400,6 +400,7 @@ export const initializeAgentSwarm = async (
     } catch (e) {
       if ((e as Error).message === "USER_ABORTED") throw e;
       console.error(`Failed to init expert for ${file.name}`, e);
+      alert(`Failed to load ${file.name}. Please check your API key and connection. Error: ${(e as Error).message}`);
     }
   }
 
