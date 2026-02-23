@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo, ClipboardEvent } from 'react';
-import { Send, User, Bot, Network, CheckCircle2, Circle, Layers, BrainCircuit, ChevronDown, ChevronRight, Play, FileText, ListTodo, MessageSquare, FileSearch, Zap, Search, MessageSquarePlus, Sparkles, Scale, AlertTriangle, ShieldCheck, XCircle, Square, Briefcase, Users, RefreshCcw, ArrowRight, Lightbulb, GitPullRequest, Star, List, Undo2, LayoutTemplate, Eye, ChevronUp, FastForward, StopCircle, Map, PenTool, Radio, Terminal, Quote, Activity, Check, X, Shield, Image as ImageIcon, Plus, Globe, Download } from 'lucide-react';
+import { Send, User, Bot, Network, CheckCircle2, Circle, Layers, BrainCircuit, ChevronDown, ChevronRight, Play, FileText, ListTodo, MessageSquare, FileSearch, Zap, Search, MessageSquarePlus, Sparkles, Scale, AlertTriangle, ShieldCheck, XCircle, Square, Briefcase, Users, RefreshCcw, ArrowRight, Lightbulb, GitPullRequest, Star, List, Undo2, LayoutTemplate, Eye, ChevronUp, FastForward, StopCircle, Map, PenTool, Radio, Terminal, Quote, Activity, Check, X, Shield, Image as ImageIcon, Plus, Globe, Download, Link as LinkIcon } from 'lucide-react';
 import { ChatMessage, AnalysisResult, OrchestratorPlan, SourceViewData, CollaborationStep, AdvisorReview, OutputQualityVerdict, ClarificationRequest, ResearchEvaluation, ExecutionLog, IntentClassification, ExecutionResultLog, LeadArbitration } from '../types';
 import { createCollaborativePlan, getSwarmStatus, refinePlanWithAdvisor, cancelRunningAgent, reviewOutputWithBoard, arbitrateReviewBoardFeedback, generateClarificationQuestions, executePlanTasks, evaluateResearchResults, synthesizeReport, classifyUserIntent, executeQuickAnswer } from '../services/geminiService';
 import { exportReportToDocx } from '../utils/docxExport';
@@ -276,25 +276,25 @@ interface AgentNodeProps {
 }
 
 const AgentNode: React.FC<AgentNodeProps> = ({ id, label, icon, isActive, isEnabled, onClick, isSystem = false, pulseColor = 'text-emerald-500' }) => (
-    <div className={`relative z-10 flex flex-col items-center gap-2 w-20 group ${!isSystem && onClick ? 'cursor-pointer' : ''}`} onClick={!isSystem ? onClick : undefined}>
+    <div className={`relative z-10 flex flex-col items-center gap-2 w-full group ${!isSystem && onClick ? 'cursor-pointer' : ''}`} onClick={!isSystem ? onClick : undefined}>
         {/* Glow behind active node */}
         <button
             className={`
-                w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 relative bg-slate-900
+                w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 relative bg-slate-900 group-hover:scale-105
                 ${isActive
-                    ? `border-${pulseColor.split('-')[1]}-500 shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-110 z-20`
+                    ? `border-${pulseColor.split('-')[1]}-500 shadow-[0_0_20px_rgba(255,255,255,0.2)] scale-110 z-20 bg-slate-800`
                     : isEnabled
-                        ? 'border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200'
-                        : 'border-slate-800 text-slate-700 opacity-50'
+                        ? 'border-slate-600 text-slate-300 hover:border-emerald-400 hover:text-emerald-400 shadow-lg shadow-black/50'
+                        : 'border-slate-800 border-dashed text-slate-600 hover:border-slate-500 hover:text-slate-400 bg-[#050b14]'
                 }
-                ${!isSystem && isEnabled ? 'cursor-pointer' : 'cursor-default'}
+                ${!isSystem && isEnabled ? 'cursor-pointer' : !isSystem ? 'cursor-pointer' : 'cursor-default'}
             `}
             title={isSystem ? "System Agent - Always Active" : isEnabled ? "Click to disable expert" : "Click to enable expert"}
         >
             {icon}
 
             {/* Status Indicator Badge (Visual Cue for Toggle) */}
-            <div className="absolute -bottom-1 -right-1 z-20 transition-transform group-hover:scale-110">
+            <div className={`absolute -bottom-1 -right-1 z-20 transition-transform group-hover:scale-110 ${!isEnabled ? 'group-hover:opacity-100 opacity-80' : ''}`}>
                 {isSystem ? (
                     <div className="bg-slate-800 text-slate-400 rounded-full p-0.5 border border-[#0b1221]" title="Always On">
                         <Shield className="w-2.5 h-2.5" />
@@ -304,8 +304,8 @@ const AgentNode: React.FC<AgentNodeProps> = ({ id, label, icon, isActive, isEnab
                         <Check className="w-2.5 h-2.5" />
                     </div>
                 ) : (
-                    <div className="bg-slate-800 text-slate-500 rounded-full p-0.5 border border-[#0b1221]">
-                        <X className="w-2.5 h-2.5" />
+                    <div className="bg-slate-800 text-slate-400 rounded-full p-0.5 border border-[#0b1221] group-hover:bg-slate-700 group-hover:text-white transition-colors">
+                        <Plus className="w-2.5 h-2.5" />
                     </div>
                 )}
             </div>
@@ -315,12 +315,19 @@ const AgentNode: React.FC<AgentNodeProps> = ({ id, label, icon, isActive, isEnab
             )}
         </button>
 
-        {/* Label */}
-        <div className={`
-            text-[9px] font-bold uppercase tracking-wider transition-colors max-w-full text-center leading-tight break-words
-            ${isActive ? pulseColor : isEnabled ? 'text-slate-400' : 'text-slate-600'}
-        `}>
-            {label}
+        {/* Label & Hint Area */}
+        <div className="flex flex-col items-center gap-1">
+            <div className={`
+                text-[9px] font-bold uppercase tracking-wider transition-colors max-w-full text-center leading-tight break-words
+                ${isActive ? pulseColor : isEnabled ? 'text-slate-300' : 'text-slate-600 group-hover:text-slate-400'}
+            `}>
+                {label}
+            </div>
+            {!isSystem && !isEnabled && (
+                <div className="text-[8px] text-emerald-500/0 group-hover:text-emerald-400/80 transition-colors uppercase tracking-widest font-semibold absolute -bottom-4 whitespace-nowrap">
+                    Click to Enable
+                </div>
+            )}
         </div>
     </div>
 );
@@ -340,74 +347,86 @@ const TeamNetwork: React.FC<{
     const isExecutionActive = phase === 'EXECUTION';
 
     return (
-        <div className="w-full bg-[#0b1221] border-b border-white/5 py-4 select-none shadow-2xl relative z-20">
-            <div className="px-4 relative flex flex-wrap items-center justify-center gap-5 mx-auto w-full max-w-7xl">
+        <div className="w-20 lg:w-[100px] bg-[#0b1221] border-r border-white/5 py-6 select-none shadow-2xl relative z-20 flex-shrink-0 h-full overflow-y-auto custom-scrollbar hide-scrollbar">
+            <div className="relative flex flex-col items-center justify-start gap-6 w-full h-full">
 
-                {/* --- SYSTEM AGENTS --- */}
+                {/* --- ROW 1: SYSTEM AGENTS --- */}
+                <div className="flex flex-col items-center justify-center gap-5 w-full">
+                    {/* 1. Review Board */}
+                    <AgentNode
+                        id="sys_reviewer"
+                        label="Review Board"
+                        icon={<ShieldCheck className="w-4 h-4" />}
+                        isActive={isReviewActive}
+                        isEnabled={true}
+                        isSystem={true}
+                        pulseColor="text-rose-400"
+                    />
 
-                {/* 1. Review Board */}
-                <AgentNode
-                    id="sys_reviewer"
-                    label="Review Board"
-                    icon={<ShieldCheck className="w-5 h-5" />}
-                    isActive={isReviewActive}
-                    isEnabled={true}
-                    isSystem={true}
-                    pulseColor="text-rose-400"
-                />
-
-                {/* 2. Lead Researcher */}
-                <AgentNode
-                    id="sys_lead"
-                    label="Lead Researcher"
-                    icon={<BrainCircuit className="w-5 h-5" />}
-                    isActive={isPlanningActive || isExecutionActive || isReviewActive}
-                    isEnabled={true}
-                    isSystem={true}
-                    pulseColor="text-indigo-400"
-                />
+                    {/* 2. Lead Researcher */}
+                    <AgentNode
+                        id="sys_lead"
+                        label="Lead Researcher"
+                        icon={<BrainCircuit className="w-4 h-4" />}
+                        isActive={isPlanningActive || isExecutionActive || isReviewActive}
+                        isEnabled={true}
+                        isSystem={true}
+                        pulseColor="text-indigo-400"
+                    />
+                </div>
 
                 {/* Separator */}
-                <div className="w-px h-8 bg-slate-800 mx-2" />
+                <div className="w-8 h-px bg-slate-800" />
 
-                {/* --- FILE AGENTS --- */}
-                {agents.map((agent, i) => {
-                    const isEnabled = activeAgents.includes(agent);
-                    const isWorking = workingAgents.includes(agent) && isExecutionActive;
+                {/* --- ROW 2: EXPERT AGENTS --- */}
+                <div className="flex flex-col items-center justify-center gap-5 w-full">
+                    {/* --- FILE AGENTS --- */}
+                    {agents.map((agent, i) => {
+                        const isEnabled = activeAgents.includes(agent);
+                        const isWorking = workingAgents.includes(agent) && isExecutionActive;
+                        const IconComponent = agent === 'Web Expert' ? Globe : agent === 'URL Expert' ? LinkIcon : FileText;
 
-                    return (
-                        <AgentNode
-                            key={agent}
-                            id={agent}
-                            label={agent.length > 12 ? agent.substring(0, 10) + '...' : agent}
-                            icon={<FileText className="w-5 h-5" />}
-                            isActive={isWorking}
-                            isEnabled={isEnabled}
-                            onClick={() => onToggle(agent)}
-                            pulseColor="text-emerald-400"
-                        />
-                    );
-                })}
+                        return (
+                            <AgentNode
+                                key={agent}
+                                id={agent}
+                                label={agent}
+                                icon={<IconComponent className="w-4 h-4" />}
+                                isActive={isWorking}
+                                isEnabled={isEnabled}
+                                onClick={() => onToggle(agent)}
+                                pulseColor="text-emerald-400"
+                            />
+                        );
+                    })}
 
-                {agents.length === 0 && (
-                    <div className="text-xs text-slate-600 italic pr-4">Upload files to deploy agents</div>
-                )}
+                    {agents.length === 0 && (
+                        <div className="text-[10px] text-slate-600 italic px-2 text-center">Enable experts</div>
+                    )}
 
-                {/* --- ADD FILE ACTION TILE --- */}
-                {onAddFileClick && (
-                    <div className="relative z-10 flex flex-col items-center gap-2 w-20 group ml-2">
-                        <button
-                            onClick={onAddFileClick}
-                            className="w-12 h-12 rounded-full flex items-center justify-center border border-dashed border-emerald-500/50 bg-[#0b1221] hover:bg-emerald-500/10 text-emerald-400/70 hover:text-emerald-400 hover:border-emerald-400 transition-all duration-300 relative cursor-pointer group-hover:scale-105"
-                            title="Upload PDF Document"
-                        >
-                            <Plus className="w-5 h-5" />
-                        </button>
-                        <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500 group-hover:text-emerald-400 transition-colors text-center w-max">
-                            Upload PDF
+                    {/* --- ADD FILE ACTION TILE --- */}
+                    {onAddFileClick && (
+                        <div className="relative z-10 flex flex-col items-center gap-1 w-full group cursor-pointer mt-2" onClick={onAddFileClick}>
+                            <button
+                                className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-slate-800 border-dashed text-slate-600 bg-[#050b14] hover:border-slate-500 hover:text-slate-400 group-hover:scale-105 transition-all duration-300 relative"
+                                title="Upload PDF Document"
+                            >
+                                <FileText className="w-4 h-4" />
+                                <div className="absolute -bottom-1 -right-1 z-20 bg-slate-800 text-slate-400 rounded-full p-0.5 border border-[#0b1221] group-hover:bg-slate-700 group-hover:text-white transition-colors">
+                                    <Plus className="w-2.5 h-2.5" />
+                                </div>
+                            </button>
+                            <div className="flex flex-col items-center gap-0.5">
+                                <div className="text-[9px] font-bold uppercase tracking-wider text-slate-600 group-hover:text-slate-400 transition-colors text-center w-max mt-1">
+                                    PDF Expert
+                                </div>
+                                <div className="text-[8px] text-emerald-500/0 group-hover:text-emerald-400/80 transition-colors uppercase tracking-widest font-semibold absolute -bottom-3 whitespace-nowrap">
+                                    Upload File
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -834,7 +853,7 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
         const agents = getSwarmStatus();
         setAvailableAgents(agents);
         // Turn off web agents by default
-        setActiveAgents(agents.filter(a => a !== 'Web Researcher' && a !== 'URL Expert'));
+        setActiveAgents(agents.filter(a => a !== 'Web Expert' && a !== 'URL Expert'));
     }, [analysisResults, swarmReadyTimestamp]);
 
     const toggleAgent = (agentName: string) => {
@@ -1364,40 +1383,51 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
 
-                {/* LEFT COLUMN: CHAT STREAM */}
+                {/* LEFT SIDEBAR: TEAM NETWORK */}
+                <TeamNetwork
+                    agents={availableAgents}
+                    activeAgents={activeAgents}
+                    onToggle={toggleAgent}
+                    phase={swarmPhase}
+                    workingAgents={workingFileAgents}
+                    onAddFileClick={onAddFileClick}
+                />
+
+                {/* CENTER COLUMN: CHAT STREAM */}
                 <div className="flex-1 flex flex-col min-w-0 bg-[#050b14] relative border-r border-white/5">
 
-                    {/* VISUAL TEAM NETWORK HEADER */}
-                    <TeamNetwork
-                        agents={availableAgents}
-                        activeAgents={activeAgents}
-                        onToggle={toggleAgent}
-                        phase={swarmPhase}
-                        workingAgents={workingFileAgents}
-                        onAddFileClick={onAddFileClick}
-                    />
-
-                    {/* TARGET URL INPUT HEADER (When URL Expert is active) */}
+                    {/* TARGET URL INPUT POPUP (When URL Expert is active) */}
                     {activeAgents.includes('URL Expert') && (
-                        <div className="border-b border-white/5 bg-[#080d1a] p-4 flex flex-col gap-3 relative z-10 shadow-md animate-in fade-in slide-in-from-top-2">
+                        <div className="absolute top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-lg bg-[#0b1221] border border-blue-500/30 rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5),0_0_40px_rgba(59,130,246,0.1)] p-5 flex flex-col gap-4 z-50 animate-in zoom-in-95 duration-200">
+                            <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                                <h3 className="text-sm font-semibold text-blue-400 flex items-center gap-2">
+                                    <Globe className="w-4 h-4" />
+                                    URL Expert Initialization
+                                </h3>
+                                <button onClick={() => toggleAgent('URL Expert')} className="text-slate-500 hover:text-slate-300 transition-colors">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
                             {urlList.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto custom-scrollbar">
                                     {urlList.map((u, i) => (
                                         <div key={i} className="flex items-center gap-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg text-xs shadow-sm">
-                                            <span className="truncate max-w-[400px]">{u}</span>
-                                            <button onClick={() => setUrlList(urlList.filter((_, idx) => idx !== i))} className="hover:text-amber-400 transition-colors">
+                                            <span className="truncate max-w-[300px]">{u}</span>
+                                            <button onClick={() => setUrlList(urlList.filter((_, idx) => idx !== i))} className="hover:text-amber-400 transition-colors ml-1">
                                                 <X className="w-3 h-3" />
                                             </button>
                                         </div>
                                     ))}
                                 </div>
                             )}
-                            <div className="relative max-w-4xl mx-auto w-full">
+
+                            <div className="relative w-full">
                                 <input
                                     type="url"
-                                    placeholder="Enter target URLs for the URL Expert (press Enter to add multiple)..."
+                                    placeholder="Paste a URL here and press Enter..."
                                     value={urlInput}
                                     onChange={(e) => setUrlInput(e.target.value)}
                                     onKeyDown={(e) => {
@@ -1409,7 +1439,7 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
                                             }
                                         }
                                     }}
-                                    className="w-full bg-[#161b2c] border border-blue-500/30 rounded-xl pl-5 pr-14 py-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/60 shadow-inner transition-colors"
+                                    className="w-full bg-[#161b2c] border border-blue-500/30 rounded-xl pl-4 pr-12 py-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/60 transition-colors"
                                 />
                                 <button
                                     onClick={() => {
@@ -1419,7 +1449,7 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
                                         }
                                     }}
                                     disabled={!urlInput.trim()}
-                                    className="absolute right-2 top-1.5 bottom-1.5 px-3 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed border border-blue-500/20 hover:border-blue-500"
+                                    className="absolute right-2 top-1.5 bottom-1.5 px-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed border border-transparent hover:border-blue-500"
                                     title="Add URL"
                                 >
                                     <Plus className="w-4 h-4" />
@@ -1644,18 +1674,18 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
                             </div>
 
                             {/* Web Reminder UI Hint */}
-                            {!activeAgents.includes('Web Researcher') && (
-                                <div className="text-center mt-1 animate-in fade-in">
-                                    <span className="text-[10px] text-slate-500 flex items-center justify-center gap-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500/50">
-                                        <Globe className="w-3 h-3 text-blue-500/60" />
-                                        <span>Need live internet data? Toggle the </span>
+                            {!activeAgents.includes('Web Expert') && (
+                                <div className="text-center mt-2 animate-in fade-in">
+                                    <span className="text-[10px] text-slate-500 inline-block">
+                                        <Globe className="w-3 h-3 text-blue-500/60 inline-flex mr-1 align-text-bottom" />
+                                        Need live internet data? Toggle the{' '}
                                         <button
-                                            onClick={() => toggleAgent('Web Researcher')}
-                                            className="text-blue-400 hover:text-blue-300 font-medium underline decoration-blue-500/30 underline-offset-2 transition-colors focus:outline-none"
+                                            onClick={() => toggleAgent('Web Expert')}
+                                            className="text-blue-400 hover:text-blue-300 font-medium underline decoration-blue-500/30 underline-offset-2 transition-colors focus:outline-none inline-flex"
                                         >
-                                            Web Researcher
+                                            Web Expert
                                         </button>
-                                        <span> in the Team Network above.</span>
+                                        {' '}in the Team Network.
                                     </span>
                                 </div>
                             )}

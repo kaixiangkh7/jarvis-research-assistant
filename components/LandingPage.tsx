@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, BrainCircuit, Scale, FileText, Zap, CheckCircle2, FileSearch, Sparkles, Fingerprint, History, MousePointerClick, Users, Network, GitMerge, ShieldAlert, Microscope, ArrowDown } from 'lucide-react';
+import { BrainCircuit, Sparkles, ShieldAlert, CheckCircle2, Network, FileText, ArrowRight, Bot } from 'lucide-react';
 
 interface LandingPageProps {
   onStartResearch: () => void;
@@ -16,222 +16,84 @@ const LandingPage: React.FC<LandingPageProps> = ({
 }) => {
 
   return (
-    <div className="flex flex-col w-full max-w-7xl mx-auto space-y-32 py-12 px-4 relative z-10">
+    <div className="flex flex-col w-full min-h-[calc(100vh-120px)] max-w-5xl mx-auto px-4 relative z-10 justify-center items-center text-center py-10">
+      {/* Decorative Glow behind text */}
+      <div className="absolute top-[30%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen" />
 
-      {/* Hero Section */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-16 pt-10">
-
-        {/* Left: Text Content */}
-        <div className="flex-1 space-y-8 text-center lg:text-left relative">
-          {/* Decorative Glow behind text */}
-          <div className="absolute -top-20 -left-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none mix-blend-screen" />
-
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-emerald-500/20 text-emerald-300 text-xs font-medium animate-in fade-in slide-in-from-bottom-4 duration-700 backdrop-blur-md shadow-lg shadow-emerald-900/10">
-            <Network className="w-3.5 h-3.5" />
-            <span className="tracking-wide">Multi-Expert AI Architecture</span>
-          </div>
-
-          <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-700 drop-shadow-sm">
-            Command an <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300">
-              AI Research Team
-            </span>
-          </h1>
-
-          <p className="text-lg text-slate-400 leading-relaxed max-w-2xl mx-auto lg:mx-0 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-            Don't just chat with an AI. Orchestrate a <strong>team of specialized experts</strong> that read documents, search the web, and verify facts for you.
-            <span className="block mt-4 text-slate-300 text-sm font-medium flex items-center justify-center lg:justify-start gap-2">
-              <ShieldAlert className="w-4 h-4 text-emerald-500" />
-              <span>Zero-trust architecture: Every claim is audited and cited.</span>
-            </span>
-          </p>
-
-          {!isLoading && (
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-8 gap-y-3 text-sm text-slate-500 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-200 font-medium">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500/80" />
-                <span>Complex Reasoning</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500/80" />
-                <span>Cross-Doc Analysis</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500/80" />
-                <span>Self-Correcting</span>
-              </div>
-            </div>
-          )}
+      <div className="space-y-8 relative z-10 max-w-3xl flex flex-col items-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-emerald-500/20 text-emerald-300 text-xs font-medium animate-in fade-in slide-in-from-bottom-4 duration-700 backdrop-blur-md shadow-lg shadow-emerald-900/10">
+          <Sparkles className="w-3.5 h-3.5" />
+          <span className="tracking-wide">Next-Gen Autonomous Agent</span>
         </div>
 
-        {/* Right: Action Area */}
-        <div className="flex-1 w-full max-w-xl animate-in fade-in zoom-in-95 duration-700 delay-200 relative flex flex-col items-center justify-center">
+        <h1 className="text-6xl lg:text-8xl font-extrabold tracking-tight text-white leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-700 drop-shadow-sm">
+          Meet <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300">
+            Jarvis
+          </span>
+        </h1>
 
+        <p className="text-xl text-slate-400 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100 max-w-2xl">
+          Don't just chat with an AI. Orchestrate a <strong>team of specialized experts</strong> that read documents, search the web, and verify facts for you.
+        </p>
+
+        <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
+          <span className="text-emerald-400 text-sm font-medium inline-flex items-center gap-2 bg-emerald-500/10 px-4 py-2.5 rounded-xl border border-emerald-500/20 shadow-inner">
+            <ShieldAlert className="w-4 h-4" />
+            <span>Zero-trust architecture: Every claim is audited and cited.</span>
+          </span>
+        </div>
+
+        <div className="w-full max-w-md pt-6 animate-in fade-in zoom-in-95 duration-700 delay-200">
           <button
             onClick={onStartResearch}
             disabled={isLoading}
-            className="w-full max-w-md group relative flex items-center justify-center gap-4 py-6 px-10 bg-slate-900 border border-emerald-500/30 rounded-3xl hover:bg-slate-800 hover:border-emerald-400 transition-all shadow-[0_0_40px_rgba(16,185,129,0.15)] hover:shadow-[0_0_60px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 duration-300"
+            className="w-full group relative flex items-center justify-center gap-4 py-5 px-8 bg-slate-900 border border-emerald-500/30 rounded-3xl hover:bg-slate-800 hover:border-emerald-400 transition-all shadow-[0_0_40px_rgba(16,185,129,0.15)] hover:shadow-[0_0_60px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-1 duration-300"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent rounded-3xl pointer-events-none" />
-            <BrainCircuit className="w-8 h-8 text-emerald-400 group-hover:scale-110 transition-transform" />
-            <span className="text-2xl font-bold text-white tracking-wide">
-              Start Researching
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent rounded-3xl pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity" />
+            <BrainCircuit className="w-7 h-7 text-emerald-400 group-hover:scale-110 group-hover:text-emerald-300 transition-all duration-300" />
+            <span className="text-xl font-bold text-white tracking-wide group-hover:text-emerald-50 transition-colors">
+              Initialize Jarvis
             </span>
           </button>
+        </div>
 
-          {!isLoading && (
-            <div className="flex justify-center mt-12 gap-8 opacity-60">
-              <div className="flex flex-col items-center gap-2 text-xs text-slate-400 uppercase tracking-widest font-semibold">
-                <Network className="w-5 h-5 mb-1" /> Web Search
+        {!isLoading && (
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 pt-10 opacity-70 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300">
+            {/* ChatGPT Comparison Section */}
+            <div className="w-full mt-4 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 bg-slate-900/50 border border-white/5 rounded-2xl p-6 backdrop-blur-sm">
+              <div className="flex items-center gap-3 text-slate-400">
+                <Bot className="w-5 h-5 opacity-60" />
+                <span className="text-sm font-medium">Standard ChatGPT</span>
               </div>
-              <div className="w-px h-10 bg-slate-800" />
-              <div className="flex flex-col items-center gap-2 text-xs text-slate-400 uppercase tracking-widest font-semibold">
-                <FileText className="w-5 h-5 mb-1" /> Document Analysis
+
+              <div className="flex items-center gap-2 text-emerald-500/50">
+                <ArrowRight className="w-4 h-4" />
+              </div>
+
+              <div className="flex items-center gap-3 text-emerald-300">
+                <Network className="w-5 h-5" />
+                <div className="text-left text-sm">
+                  <span className="font-bold block">Jarvis Multi-Agent Swarm</span>
+                  <span className="text-slate-400 text-xs">Parallel research, planning, & critical review</span>
+                </div>
               </div>
             </div>
-          )}
-        </div>
+
+            <div className="flex w-full justify-center gap-8 mt-4 pt-4 border-t border-white/5">
+              <div className="flex items-center gap-2 text-xs text-slate-400 uppercase tracking-widest font-semibold">
+                <Network className="w-4 h-4" /> Web Search
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-400 uppercase tracking-widest font-semibold">
+                <FileText className="w-4 h-4" /> Document Analysis
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-400 uppercase tracking-widest font-semibold">
+                <CheckCircle2 className="w-4 h-4" /> Self-Correcting
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Architecture Visualization Section */}
-      {!isLoading && (
-        <div className="relative animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300">
-          <div className="text-center mb-16 space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold uppercase tracking-widest">
-              <Zap className="w-3 h-3" /> Under the hood
-            </div>
-            <h2 className="text-3xl md:text-5xl font-bold text-white tracking-tight">
-              Not a Chatbot. <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
-                An Intelligent Team.
-              </span>
-            </h2>
-            <p className="text-slate-400 max-w-2xl mx-auto text-lg leading-relaxed">
-              Most AI tools talk <em>at</em> you. Jarvis creates a virtual team where specialized experts research, plan, and verify facts before they ever answer.
-            </p>
-          </div>
-
-          {/* The Network Grid Layout */}
-          <div className="relative max-w-5xl mx-auto">
-
-            {/* Visual Connection Lines (Desktop) */}
-            <div className="hidden md:block absolute top-[140px] left-1/2 -translate-x-1/2 w-px h-20 bg-gradient-to-b from-indigo-500/50 to-transparent z-0"></div>
-            <div className="hidden md:block absolute top-[140px] left-[20%] right-[20%] h-px bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent z-0"></div>
-            <div className="hidden md:block absolute top-[140px] left-[20%] w-px h-20 bg-gradient-to-b from-indigo-500/30 to-transparent z-0"></div>
-            <div className="hidden md:block absolute top-[140px] right-[20%] w-px h-20 bg-gradient-to-b from-indigo-500/30 to-transparent z-0"></div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 gap-y-12">
-
-              {/* Central Coordinator (Top) */}
-              <div className="md:col-span-3 flex justify-center z-10">
-                <div className="bg-slate-900 border border-indigo-500/50 p-8 rounded-2xl max-w-md w-full shadow-[0_0_40px_rgba(99,102,241,0.1)] flex flex-col items-center text-center transform hover:-translate-y-1 transition-transform duration-300">
-                  <div className="w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center mb-5 shadow-lg shadow-indigo-500/30">
-                    <BrainCircuit className="w-7 h-7 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-1">Lead Researcher</h3>
-                  <div className="text-xs font-mono text-indigo-400 mb-3 bg-indigo-950/30 px-2 py-0.5 rounded">Role: Strategy & Orchestration</div>
-                  <p className="text-sm text-slate-400 leading-relaxed">
-                    Does not hallucinate answers. Instead, it breaks complex queries into execution plans and delegates tasks to the experts.
-                  </p>
-                </div>
-              </div>
-
-              {/* Left: Experts */}
-              <div className="bg-slate-900/60 border border-emerald-500/20 p-6 rounded-2xl relative group hover:bg-slate-900 transition-colors z-10 flex flex-col items-center text-center md:items-start md:text-left">
-                <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20 mb-4 group-hover:scale-110 transition-transform">
-                  <Users className="w-6 h-6 text-emerald-400" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-1">Document Experts</h3>
-                <div className="text-[10px] font-mono text-emerald-500 uppercase mb-3">Modular Expertise</div>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  Dedicated experts are spun up to browse the web, scrape complex URLs, or analyze specific PDF documents you provide. They maintain hyper-focus to ensure high-fidelity retrieval.
-                </p>
-              </div>
-
-              {/* Middle: Loop Visual */}
-              <div className="hidden md:flex flex-col items-center justify-center opacity-40 space-y-3 pt-8">
-                <div className="relative w-16 h-16">
-                  <div className="absolute inset-0 rounded-full border-2 border-dashed border-slate-500 animate-[spin_10s_linear_infinite]"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <GitMerge className="w-6 h-6 text-slate-400 rotate-90" />
-                  </div>
-                </div>
-                <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold text-center">Feedback<br />Loop</span>
-              </div>
-
-              {/* Right: Critic */}
-              <div className="bg-slate-900/60 border border-rose-500/20 p-6 rounded-2xl relative group hover:bg-slate-900 transition-colors z-10 flex flex-col items-center text-center md:items-start md:text-left">
-                <div className="w-12 h-12 bg-rose-500/10 rounded-xl flex items-center justify-center border border-rose-500/20 mb-4 group-hover:scale-110 transition-transform">
-                  <Scale className="w-6 h-6 text-rose-400" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-1">The Review Board</h3>
-                <div className="text-[10px] font-mono text-rose-500 uppercase mb-3">Quality Assurance</div>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  A "Ruthless Editor" agent that audits plans and final answers. It rejects lazy reasoning and forces the team to cite sources properly.
-                </p>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Workflow Section */}
-      {!isLoading && (
-        <div className="border-t border-white/5 pt-20 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-500">
-          <h2 className="text-2xl font-bold text-white text-center mb-16 tracking-tight">The Autonomous Workflow</h2>
-          <div className="relative max-w-5xl mx-auto">
-            {/* Connecting Line (Desktop) */}
-            <div className="hidden md:block absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent -translate-y-1/2 z-0 opacity-50" />
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative z-10">
-              {/* Step 1 */}
-              <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 text-center hover:border-emerald-500/30 transition-colors group">
-                <div className="w-12 h-12 mx-auto bg-slate-900 rounded-full flex items-center justify-center border border-slate-800 mb-5 text-emerald-500 font-bold group-hover:scale-110 transition-transform shadow-lg group-hover:shadow-emerald-900/20 shadow-black/50">1</div>
-                <h4 className="text-white font-semibold mb-2">Ingestion</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">Multimodal parsing extracts structure, key metrics, and summaries from your PDFs.</p>
-              </div>
-
-              {/* Step 2 */}
-              <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 text-center hover:border-emerald-500/30 transition-colors group">
-                <div className="w-12 h-12 mx-auto bg-slate-900 rounded-full flex items-center justify-center border border-slate-800 mb-5 text-emerald-500 font-bold group-hover:scale-110 transition-transform shadow-lg group-hover:shadow-emerald-900/20 shadow-black/50">2</div>
-                <h4 className="text-white font-semibold mb-2">Planning</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">The Lead Researcher designs a multi-step execution strategy, verified by the Critic.</p>
-              </div>
-
-              {/* Step 3 */}
-              <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 text-center hover:border-emerald-500/30 transition-colors group">
-                <div className="w-12 h-12 mx-auto bg-slate-900 rounded-full flex items-center justify-center border border-slate-800 mb-5 text-emerald-500 font-bold group-hover:scale-110 transition-transform shadow-lg group-hover:shadow-emerald-900/20 shadow-black/50">3</div>
-                <h4 className="text-white font-semibold mb-2">Execution</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">Experts query documents and search the web in parallel. The team synthesizes findings into a coherent report.</p>
-              </div>
-
-              {/* Step 4 */}
-              <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 text-center hover:border-emerald-500/30 transition-colors group">
-                <div className="w-12 h-12 mx-auto bg-slate-900 rounded-full flex items-center justify-center border border-slate-800 mb-5 text-emerald-500 font-bold group-hover:scale-110 transition-transform shadow-lg group-hover:shadow-emerald-900/20 shadow-black/50">4</div>
-                <h4 className="text-white font-semibold mb-2">Audit</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">Final output is cross-referenced against sources. Every claim gets a clickable citation.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Footer / Badges */}
-      {!isLoading && (
-        <div className="flex flex-col md:flex-row items-center justify-between border-t border-white/5 pt-10 pb-4 text-xs font-medium text-slate-500 uppercase tracking-widest">
-          <div className="flex items-center gap-2 hover:text-emerald-400 transition-colors cursor-default">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Built with Google Gemini API</span>
-          </div>
-          <div className="flex gap-8 mt-6 md:mt-0">
-            <span className="hover:text-slate-300 transition-colors cursor-default">Enterprise Grade Security</span>
-            <span className="hover:text-slate-300 transition-colors cursor-default">Context Window 1M+</span>
-            <span className="hover:text-slate-300 transition-colors cursor-default">Multimodal Native</span>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };

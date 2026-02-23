@@ -196,7 +196,7 @@ const App: React.FC = () => {
               <div className="bg-gradient-to-tr from-emerald-500 to-emerald-600 p-1.5 rounded-lg shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-shadow">
                 <Bot className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold tracking-tight text-white">AI Team</span>
+              <span className="text-xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors duration-300">Jarvis</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800/60 transition-colors">
               <Sparkles className="w-3 h-3 text-purple-400" />

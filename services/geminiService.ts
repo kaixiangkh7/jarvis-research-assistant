@@ -295,8 +295,8 @@ export const initializeAgentSwarm = async (
 ) => {
   initController();
 
-  // Initialize Web Researcher (if not exists)
-  if (!agentSwarm.has("Web Researcher")) {
+  // Initialize Web Expert (if not exists)
+  if (!agentSwarm.has("Web Expert")) {
     const webChat = ai.chats.create({
       model: "gemini-3.1-pro-preview",
       config: {
@@ -315,8 +315,8 @@ export const initializeAgentSwarm = async (
         5. Focus exclusively on providing accurate, verifiable intelligence.`
       }
     });
-    agentSwarm.set("Web Researcher", {
-      fileName: "Web Researcher",
+    agentSwarm.set("Web Expert", {
+      fileName: "Web Expert",
       chat: webChat,
       isReady: true
     });
@@ -544,7 +544,7 @@ export const executeQuickAnswer = async (
     CITATION RULE:
     You MUST cite your sources using <claim> tags. 
     CRITICAL: You MUST WRAP the actual text content with the tag. Do not just append the tag.
-    CRITICAL URL RULE: If the Context text provides a specific URL as the source, you MUST use that exact URL as the 'source' attribute in your <claim> tag. Do NOT use the agent's name like "Web Researcher" or "URL Expert" as the source if a real URL is provided.
+    CRITICAL URL RULE: If the Context text provides a specific URL as the source, you MUST use that exact URL as the 'source' attribute in your <claim> tag. Do NOT use the agent's name like "Web Expert" or "URL Expert" as the source if a real URL is provided.
 
     CORRECT FORMAT:
     <claim source="doc.pdf" page="10" quote="revenue was $5B">Revenue was $5B in 2023</claim>.
@@ -553,7 +553,7 @@ export const executeQuickAnswer = async (
     INCORRECT FORMATS (DO NOT USE):
     - Revenue was $5B in 2023 <claim ...>. (Tag at end)
     - Revenue was $5B in 2023 <claim ... />. (Self-closing)
-    - <claim source="Web Researcher">...</claim> (When the actual text contained a real URL, use the real URL instead)
+    - <claim source="Web Expert">...</claim> (When the actual text contained a real URL, use the real URL instead)
 
     Ensure every claim is properly closed with </claim>.
   `;
@@ -709,7 +709,7 @@ const leadArbitrationSchema: Schema = {
     },
     reasoning: { type: Type.STRING, description: "Your reasoning for accepting or overriding the consultant's opinion." },
     remediation_plan: orchestratorSchema, // Required if REJECTED or INCREMENTAL
-    clarification_message: { type: Type.STRING, description: "Only if NEEDS_CLARIFICATION. A direct message explaining to the user why you are stuck (e.g., 'To find the latest trends, I need you to activate the Web Researcher agent')." }
+    clarification_message: { type: Type.STRING, description: "Only if NEEDS_CLARIFICATION. A direct message explaining to the user why you are stuck (e.g., 'To find the latest trends, I need you to activate the Web Expert agent')." }
   },
   required: ["verdict", "reasoning"]
 };
@@ -801,7 +801,7 @@ export const createCollaborativePlan = async (
     ${targets.map(f => `- ${f}`).join('\n')}
     
     AGENT ROLES:
-    - **Web Researcher**: Use for broad internet searches, finding latest news, or verifying facts. CITATION MUST INCLUDE URL.
+    - **Web Expert**: Use for broad internet searches, finding latest news, or verifying facts. CITATION MUST INCLUDE URL.
     - **URL Expert**: Use ONLY when the user provides a specific URL to analyze. Do NOT use for general search.
     - **[File Name]**: Use for deep retrieval from that specific uploaded document.
 
@@ -1121,7 +1121,7 @@ export const synthesizeReport = async (
         2. Then, the detailed response.
         3. **CITATION RULE**: EVERY fact/claim MUST be wrapped in a <claim> tag.
            - Attributes: source="filename or URL", page="X", quote="exact substring".
-           - **CRITICAL URL RULE**: If the EXPERT REPORT provides its own citation with a specific source URL, you MUST preserve and use THAT EXACT URL as the 'source' attribute. Do NOT use the agent's name (e.g., "Web Researcher") as the source if an actual URL is available.
+           - **CRITICAL URL RULE**: If the EXPERT REPORT provides its own citation with a specific source URL, you MUST preserve and use THAT EXACT URL as the 'source' attribute. Do NOT use the agent's name (e.g., "Web Expert") as the source if an actual URL is available.
            - **EXACT URL PRESERVATION**: Do NOT truncate, strip paths, or simplify the URLs provided by the expert agents. You must copy the exact, full URL string into the <claim source="URL"> attribute without any modification. No generic domains.
            - **LOGIC RULE**: If the conclusion is derived, ADD logic="Reasoning used".
            
@@ -1177,7 +1177,7 @@ export const reviewOutputWithBoard = async (
       
       1. **Address User Request**: Does the synthesis fundamentally address the user's main request?
       2. **Hallucination Detection**: Are there factual claims not grounded in sources?
-         - **EXTERNAL URL RULE**: The Lead Researcher has access to external Web Researchers. Citations that reference external URLs or web resources are VALID and should NOT be flagged as hallucinations. Only flag claims that have no source or contradict logical facts.
+         - **EXTERNAL URL RULE**: The Lead Researcher has access to external Web Experts. Citations that reference external URLs or web resources are VALID and should NOT be flagged as hallucinations. Only flag claims that have no source or contradict logical facts.
       
       RULES:
       - **DO NOT provide a verdict (no approve/reject).** Leave the final decision to the Lead Researcher.
@@ -1256,7 +1256,7 @@ export const arbitrateReviewBoardFeedback = async (
            • An incremental fix would not resolve the core problem  
          - **DEFAULT TO INCREMENTAL** when in doubt. Most Consultant feedback is about missing details, not structural failures.
 
-      6. **NEEDS_CLARIFICATION VERDICT**: If the Consultant correctly points out missing data (e.g. "latest trends absent"), BUT you cannot find this data because you don't have the right active expert agents (for example, you only have static PDFs, but need the 'Web Researcher' agent), you MUST output 'NEEDS_CLARIFICATION'. Do NOT continually output 'REJECTED' with a new plan for the same static file. Use 'clarification_message' to explain the root cause and ask the user to turn on the required agent or provide newer files.
+      6. **NEEDS_CLARIFICATION VERDICT**: If the Consultant correctly points out missing data (e.g. "latest trends absent"), BUT you cannot find this data because you don't have the right active expert agents (for example, you only have static PDFs, but need the 'Web Expert' agent), you MUST output 'NEEDS_CLARIFICATION'. Do NOT continually output 'REJECTED' with a new plan for the same static file. Use 'clarification_message' to explain the root cause and ask the user to turn on the required agent or provide newer files.
       
       Output JSON.
     `;
