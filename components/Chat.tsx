@@ -1305,7 +1305,6 @@ const Chat: React.FC<ChatProps> = ({ analysisResults, swarmReadyTimestamp, onVie
         const attachedImagesToSent = [...imageAttachments];
         setInput('');
         setUrlInput('');
-        setUrlList([]);
         setImageAttachments([]);
         setIsProcessing(true);
         setIsUrlInputExpanded(false);
