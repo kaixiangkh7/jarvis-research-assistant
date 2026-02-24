@@ -1,13 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // =============================================================================
-// GEMINI API PROXY — Vercel Serverless Function
+// GEMINI API PROXY — Vercel Serverless Function (Streaming)
 // =============================================================================
-// This is the ONLY place the API key lives. It never reaches the client.
-// All Gemini SDK requests from the frontend are routed through this proxy.
+// Uses streamGenerateContent so data flows back immediately.
+// This prevents Vercel's 60s idle timeout from killing long AI calls
+// (e.g. Web Expert / URL Expert with Google Search grounding).
 // =============================================================================
 
-export const maxDuration = 60; // Tell Vercel this function can run for up to 60s
+export const maxDuration = 300; // Up to 300s on Pro plan; 60s on Hobby (streaming still helps)
 
 // --- RATE LIMITING (In-Memory, per serverless instance) ---
 interface RateLimitEntry {
@@ -154,35 +155,108 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(400).json({ error: 'Target URL not allowed' });
         }
 
-        parsedUrl.searchParams.set('key', apiKey);
+        // =========================================================
+        // STREAMING STRATEGY:
+        // Replace :generateContent with :streamGenerateContent so
+        // Google sends back Server-Sent Events (SSE chunks).
+        // We then pipe those chunks straight to the client.
+        // This keeps the Vercel function "active" the whole time,
+        // preventing the 60-second idle timeout.
+        // =========================================================
+        const isStreaming = parsedUrl.pathname.endsWith(':generateContent');
 
-        // Fetch from Google (add streaming parameter)
-        if (requestBody && !parsedUrl.toString().includes('stream=')) {
-            parsedUrl.searchParams.set('alt', 'sse'); // Request Server-Sent Events from Gemini if possible, or just stream
+        if (isStreaming) {
+            // Redirect to the streaming endpoint
+            parsedUrl.pathname = parsedUrl.pathname.replace(':generateContent', ':streamGenerateContent');
+            parsedUrl.searchParams.set('key', apiKey);
+            parsedUrl.searchParams.set('alt', 'sse'); // Request SSE format
+
+            const geminiResponse = await fetch(parsedUrl.toString(), {
+                method: method || 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: requestBody ? JSON.stringify(requestBody) : undefined,
+            });
+
+            if (!geminiResponse.ok) {
+                const errText = await geminiResponse.text();
+                res.status(geminiResponse.status);
+                res.setHeader('Content-Type', 'application/json');
+                return res.send(errText);
+            }
+
+            // Accumulate all SSE chunks and return assembled JSON response
+            // (The client uses proxyFetch which expects JSON, not SSE)
+            const reader = geminiResponse.body?.getReader();
+            if (!reader) {
+                return res.status(500).json({ error: 'No response body from Gemini streaming API' });
+            }
+
+            const decoder = new TextDecoder();
+            let fullText = '';
+            let lastCandidateJson: any = null;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const jsonStr = line.slice(6).trim();
+                        if (jsonStr === '[DONE]') continue;
+                        try {
+                            const parsed = JSON.parse(jsonStr);
+                            const parts = parsed?.candidates?.[0]?.content?.parts;
+                            if (parts) {
+                                for (const part of parts) {
+                                    if (part.text) fullText += part.text;
+                                }
+                                lastCandidateJson = parsed;
+                            }
+                        } catch {
+                            // Partial chunk, skip
+                        }
+                    }
+                }
+            }
+
+            // Rebuild a response in the same format as :generateContent
+            const assembled = lastCandidateJson
+                ? {
+                    ...lastCandidateJson,
+                    candidates: [
+                        {
+                            ...lastCandidateJson.candidates?.[0],
+                            content: {
+                                role: 'model',
+                                parts: [{ text: fullText }],
+                            },
+                        },
+                    ],
+                }
+                : { candidates: [{ content: { role: 'model', parts: [{ text: fullText }] } }] };
+
+            res.status(200);
+            res.setHeader('Content-Type', 'application/json');
+            return res.send(JSON.stringify(assembled));
+
+        } else {
+            // Non-generateContent paths: pass through as-is (e.g. model listing)
+            parsedUrl.searchParams.set('key', apiKey);
+
+            const geminiResponse = await fetch(parsedUrl.toString(), {
+                method: method || 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: requestBody ? JSON.stringify(requestBody) : undefined,
+            });
+
+            const responseData = await geminiResponse.text();
+            res.status(geminiResponse.status);
+            res.setHeader('Content-Type', geminiResponse.headers.get('content-type') || 'application/json');
+            return res.send(responseData);
         }
-
-        const geminiResponse = await fetch(parsedUrl.toString(), {
-            method: method || 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: requestBody ? JSON.stringify(requestBody) : undefined,
-        });
-
-        res.status(geminiResponse.status);
-        res.setHeader('Content-Type', geminiResponse.headers.get('content-type') || 'application/json');
-
-        if (!geminiResponse.body) {
-            return res.send(await geminiResponse.text());
-        }
-
-        // Stream the response directly to the client to bypass Vercel's 60s idle timeout
-        const reader = geminiResponse.body.getReader();
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            res.write(value);
-        }
-        res.end();
-
 
     } catch (error: any) {
         console.error('Proxy error:', error);
