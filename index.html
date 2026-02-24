@@ -5,6 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jarvis</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
   <script>
     window.initialErrors = [];
     window.addEventListener('error', function (event) {
@@ -16,52 +18,6 @@
       console.log('EARLY PROMISE CAUGHT:', event.reason);
     });
   </script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            slate: {
-              850: '#1e293b',
-              900: '#0f172a',
-              950: '#020617',
-            }
-          },
-          fontFamily: {
-            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", 'monospace'],
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    body {
-      background-color: #0f172a;
-      /* slate-900 */
-      color: #f1f5f9;
-      /* slate-100 */
-    }
-
-    /* Custom scrollbar for a cleaner feel */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: #1e293b;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #475569;
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: #64748b;
-    }
-  </style>
   <link rel="stylesheet" href="/index.css">
 </head>
 
