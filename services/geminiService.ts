@@ -297,7 +297,7 @@ export const initializeAgentSwarm = async (
   // Initialize Web Expert (if not exists)
   if (!agentSwarm.has("Web Expert")) {
     const webChat = ai.chats.create({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-3-flash-preview",
       config: {
         temperature: 0.1, // Lower temperature for more grounded facts
         tools: [{ googleSearch: {} }],
@@ -326,7 +326,7 @@ export const initializeAgentSwarm = async (
     const urlContext = urls.length > 0 ? `The following URLs have been provided for your analysis: \n${urls.join('\n')}\n` : '';
 
     const urlChat = ai.chats.create({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-3-flash-preview",
       config: {
         temperature: 0.1,
         tools: [{ googleSearch: {} }],

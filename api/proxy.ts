@@ -1,16 +1,15 @@
-export const config = {
-    runtime: 'edge',
-};
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // =============================================================================
-// GEMINI API PROXY — Vercel Edge Function
+// GEMINI API PROXY — Vercel Serverless Function
 // =============================================================================
 // This is the ONLY place the API key lives. It never reaches the client.
 // All Gemini SDK requests from the frontend are routed through this proxy.
-// It uses Vercel Edge to stream the response back and bypass Hobby 10s timeouts.
 // =============================================================================
 
-// --- RATE LIMITING (In-Memory, per Edge isolate) ---
+export const maxDuration = 60; // Tell Vercel this function can run for up to 60s
+
+// --- RATE LIMITING (In-Memory, per serverless instance) ---
 interface RateLimitEntry {
     minuteCount: number;
     hourCount: number;
@@ -21,27 +20,21 @@ interface RateLimitEntry {
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
 const RATE_LIMITS = {
-    perMinute: 20,
-    perHour: 200,
+    perMinute: 20,   // max requests per minute per IP
+    perHour: 200,    // max requests per hour per IP
 };
 
-function getClientIP(req: Request): string {
-    const forwarded = req.headers.get('x-forwarded-for');
-    if (forwarded) return forwarded.split(',')[0].trim();
-    return 'unknown';
+function getClientIP(req: VercelRequest): string {
+    const forwarded = req.headers['x-forwarded-for'];
+    if (typeof forwarded === 'string') return forwarded.split(',')[0].trim();
+    if (Array.isArray(forwarded)) return forwarded[0].trim();
+    return req.socket?.remoteAddress || 'unknown';
 }
 
 function checkRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
     const now = Date.now();
-
-    // Lazy cleanup of old entries
-    if (Math.random() < 0.05) { // 5% chance on each request to cleanup
-        for (const [key, val] of rateLimitStore.entries()) {
-            if (now > val.hourReset + 3_600_000) rateLimitStore.delete(key);
-        }
-    }
-
     let entry = rateLimitStore.get(ip);
+
     if (!entry) {
         entry = {
             minuteCount: 0,
@@ -73,6 +66,16 @@ function checkRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
     return { allowed: true };
 }
 
+// Clean stale entries periodically (prevent memory leak)
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, entry] of rateLimitStore.entries()) {
+        if (now > entry.hourReset + 3_600_000) {
+            rateLimitStore.delete(ip);
+        }
+    }
+}, 300_000); // Every 5 minutes
+
 // --- CORS ---
 function getAllowedOrigins(): string[] {
     const origins: string[] = [];
@@ -82,74 +85,61 @@ function getAllowedOrigins(): string[] {
     return origins;
 }
 
-function isOriginAllowed(req: Request, origin: string | null): boolean {
+function isOriginAllowed(req: VercelRequest, origin: string | undefined): boolean {
     if (!origin) return false;
     const allowed = getAllowedOrigins();
     if (allowed.length === 0) return true;
     if (allowed.some(a => origin.startsWith(a) || origin === a)) return true;
 
-    const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
-    if (host && origin.includes(host)) return true;
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    if (host && origin.includes(host as string)) return true;
     if (process.env.VERCEL === '1' && origin.endsWith('.vercel.app')) return true;
 
     return false;
 }
 
-const sendJson = (data: any, status: number, headers = new Headers()) => {
-    headers.set('Content-Type', 'application/json');
-    return new Response(JSON.stringify(data), { status, headers });
-};
-
 // =============================================================================
 // MAIN HANDLER
 // =============================================================================
-export default async function handler(req: Request) {
-    const origin = req.headers.get('origin');
-    const corsHeaders = new Headers();
-
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // --- CORS Headers ---
+    const origin = req.headers.origin as string | undefined;
     if (origin && isOriginAllowed(req, origin)) {
-        corsHeaders.set('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Origin', origin);
     }
-    corsHeaders.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    corsHeaders.set('Access-Control-Allow-Headers', 'Content-Type');
-    corsHeaders.set('Access-Control-Max-Age', '86400');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Max-Age', '86400');
 
-    // Handle Preflight
-    if (req.method === 'OPTIONS') {
-        return new Response(null, { status: 200, headers: corsHeaders });
-    }
-
-    if (req.method !== 'POST') {
-        return sendJson({ error: 'Method not allowed' }, 405, corsHeaders);
-    }
+    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     // --- API Key Check ---
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
         console.error('GEMINI_API_KEY not configured');
-        return sendJson({ error: 'Server configuration error' }, 500, corsHeaders);
+        return res.status(500).json({ error: 'Server configuration error' });
     }
 
     // --- Rate Limiting ---
     const clientIP = getClientIP(req);
     const rateCheck = checkRateLimit(clientIP);
     if (!rateCheck.allowed) {
-        corsHeaders.set('Retry-After', String(rateCheck.retryAfter || 60));
-        return sendJson({ error: 'Rate limit exceeded' }, 429, corsHeaders);
+        res.setHeader('Retry-After', String(rateCheck.retryAfter || 60));
+        return res.status(429).json({ error: 'Rate limit exceeded.', retryAfter: rateCheck.retryAfter });
     }
 
-    // --- Origin Check ---
-    if (!isOriginAllowed(req, origin)) {
-        return sendJson({ error: 'Forbidden: Invalid origin' }, 403, corsHeaders);
-    }
+    if (!isOriginAllowed(req, origin)) return res.status(403).json({ error: 'Forbidden: Invalid origin' });
 
-    // --- Parse Body ---
+    // --- Parse & Validate Body ---
     try {
-        const body = await req.json();
+        const body = req.body;
+        if (!body) return res.status(400).json({ error: 'Request body is required' });
+
         const { targetUrl, method, body: requestBody } = body;
 
         if (!targetUrl || typeof targetUrl !== 'string') {
-            return sendJson({ error: 'Missing targetUrl' }, 400, corsHeaders);
+            return res.status(400).json({ error: 'Missing or invalid targetUrl' });
         }
 
         const allowedHosts = ['generativelanguage.googleapis.com'];
@@ -157,34 +147,30 @@ export default async function handler(req: Request) {
         try {
             parsedUrl = new URL(targetUrl);
         } catch {
-            return sendJson({ error: 'Invalid targetUrl format' }, 400, corsHeaders);
+            return res.status(400).json({ error: 'Invalid targetUrl format' });
         }
 
         if (!allowedHosts.includes(parsedUrl.hostname)) {
-            return sendJson({ error: 'Target URL not allowed' }, 400, corsHeaders);
+            return res.status(400).json({ error: 'Target URL not allowed' });
         }
 
         parsedUrl.searchParams.set('key', apiKey);
 
-        // Forward to Gemini
+        // Fetch from Google
         const geminiResponse = await fetch(parsedUrl.toString(), {
             method: method || 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: requestBody ? JSON.stringify(requestBody) : undefined,
         });
 
-        // Add headers from Gemini
-        const responseHeaders = new Headers(corsHeaders);
-        responseHeaders.set('Content-Type', geminiResponse.headers.get('content-type') || 'application/json');
+        const responseData = await geminiResponse.text();
 
-        // Stream the response body back immediately to bypass Vercel Hobby 10s idle limits!
-        return new Response(geminiResponse.body, {
-            status: geminiResponse.status,
-            headers: responseHeaders,
-        });
+        res.status(geminiResponse.status);
+        res.setHeader('Content-Type', geminiResponse.headers.get('content-type') || 'application/json');
+        return res.send(responseData);
 
     } catch (error: any) {
-        console.error('Edge Proxy error:', error);
-        return sendJson({ error: 'Proxy request failed', message: error.message }, 500, corsHeaders);
+        console.error('Proxy error:', error);
+        return res.status(500).json({ error: 'Proxy request failed', message: error.message || 'Unknown error' });
     }
 }
