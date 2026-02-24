@@ -106,15 +106,20 @@ app.post('/api/proxy', async (req, res) => {
             const decoder = new TextDecoder();
             let fullText = '';
             let lastCandidateJson = null;
+            let buffer = '';
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n');
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
 
-                for (const line of lines) {
+                // Keep the last partial line in the buffer
+                buffer = lines.pop() || '';
+
+                for (let line of lines) {
+                    line = line.trim();
                     if (line.startsWith('data: ')) {
                         const jsonStr = line.slice(6).trim();
                         if (jsonStr === '[DONE]') continue;
@@ -127,11 +132,25 @@ app.post('/api/proxy', async (req, res) => {
                                 }
                                 lastCandidateJson = parsed;
                             }
-                        } catch {
-                            // ignore partial
+                        } catch (e) {
+                            // ignore partial JSON (though buffer should prevent this)
                         }
                     }
                 }
+            }
+
+            // Process any remaining buffer just in case
+            if (buffer.trim().startsWith('data: ')) {
+                try {
+                    const parsed = JSON.parse(buffer.trim().slice(6).trim());
+                    const parts = parsed?.candidates?.[0]?.content?.parts;
+                    if (parts) {
+                        for (const part of parts) {
+                            if (part.text) fullText += part.text;
+                        }
+                        lastCandidateJson = parsed;
+                    }
+                } catch (e) { }
             }
 
             const assembled = lastCandidateJson

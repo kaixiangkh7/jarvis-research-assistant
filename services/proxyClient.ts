@@ -52,56 +52,7 @@ async function proxyFetch(
         throw error;
     }
 
-    // Since we stream it back from proxy using alt=sse, we need to read the stream
-    // and reconstruct the final JSON text before parsing it.
-    const reader = response.body?.getReader();
-    if (!reader) {
-        return response.json();
-    }
-
-    const decoder = new TextDecoder();
-    let resultText = '';
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        resultText += decoder.decode(value, { stream: true });
-    }
-
-    // The response is now a series of Server-Sent Events: "data: {...}\n\n"
-    // We need to extract all the text pieces and combine them.
-    const lines = resultText.split('\n');
-    let fullContent = '';
-    let lastCandidateInfo = null;
-
-    for (const line of lines) {
-        if (line.startsWith('data: ')) {
-            const dataStr = line.replace('data: ', '').trim();
-            if (dataStr === '[DONE]') continue;
-            try {
-                const chunk = JSON.parse(dataStr);
-                if (chunk.candidates && chunk.candidates[0].content && chunk.candidates[0].content.parts) {
-                    fullContent += chunk.candidates[0].content.parts.map((p: any) => p.text || '').join('');
-                    // Keep the last candidate info for the final stub
-                    lastCandidateInfo = chunk.candidates[0];
-                }
-            } catch (e) {
-                console.warn('Failed to parse SSE chunk', dataStr);
-            }
-        }
-    }
-
-    // Stub a response object that looks like the standard unary response
-    return {
-        candidates: [
-            {
-                ...lastCandidateInfo,
-                content: {
-                    parts: [{ text: fullContent }]
-                }
-            }
-        ]
-    };
+    return response.json();
 }
 
 // =============================================================================
