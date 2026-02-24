@@ -156,18 +156,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         parsedUrl.searchParams.set('key', apiKey);
 
-        // Fetch from Google
+        // Fetch from Google (add streaming parameter)
+        if (requestBody && !parsedUrl.toString().includes('stream=')) {
+            parsedUrl.searchParams.set('alt', 'sse'); // Request Server-Sent Events from Gemini if possible, or just stream
+        }
+
         const geminiResponse = await fetch(parsedUrl.toString(), {
             method: method || 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: requestBody ? JSON.stringify(requestBody) : undefined,
         });
 
-        const responseData = await geminiResponse.text();
-
         res.status(geminiResponse.status);
         res.setHeader('Content-Type', geminiResponse.headers.get('content-type') || 'application/json');
-        return res.send(responseData);
+
+        if (!geminiResponse.body) {
+            return res.send(await geminiResponse.text());
+        }
+
+        // Stream the response directly to the client to bypass Vercel's 60s idle timeout
+        const reader = geminiResponse.body.getReader();
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(value);
+        }
+        res.end();
+
 
     } catch (error: any) {
         console.error('Proxy error:', error);
